@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2012 Fuses
+	Copyright (C) 2012 Unlimited.io
 
 	This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,9 +20,17 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <stdint.h>
+#include <math.h>
 
+#include "modhandler.h"
 #include "emmc_recover.h"
 #include "gopt.h"
+#include "pbl_reset.h"
+
+#define MAX_CHUNK 2097152
+
+void write_chunk(const char* file, long int offset, uint8_t *data, int nof_bytes);
 
 void usage() {
 	printf("emmc_recovery %s usage:\n", VERSION);
@@ -32,7 +40,9 @@ void usage() {
 	printf("\t-f | --flash\n");
 	printf("\t-d | --device\n");
 	printf("\t-a | --backupafter\n");
-	printf("\nCopyright (C) 2012 Fuses, source released under GPL license\n");
+	printf("\t-c | --chunksize\n");
+	printf("\nCopyright (C) 2012 Unlimited.io, source released under GPL license\n");
+
 }
 
 int check_file(const char* file) {
@@ -48,17 +58,22 @@ int main(int argc, const char **argv, char **env) {
 	const char* backup_after_file;
 	void* options = NULL;
 
+	int chunk_size = 0;
+	int reboot_chunk = 0;
+
 	if (argc <= 1) {
 		usage();
 		return EXIT_SUCCESS;
 	}
 
 	options = gopt_sort( & argc, argv, gopt_start(
-		  gopt_option( 'h', 0, gopt_shorts( 'h' )			, gopt_longs( "help")),			// Help
-		  gopt_option( 'b', GOPT_ARG,  gopt_shorts( 'b' )	, gopt_longs( "backup")),		// Just backups partition
-		  gopt_option( 'f', GOPT_ARG,  gopt_shorts( 'f' )	, gopt_longs( "flash")),		// Flash image to --device
-		  gopt_option( 'a', GOPT_ARG,  gopt_shorts( 'a' )	, gopt_longs( "backupafter")),  // Backups same partition after flash
-		  gopt_option( 'd', GOPT_ARG,  gopt_shorts( 'd' )	, gopt_longs( "device"))		// Device to use
+		  gopt_option( 'h', 0, gopt_shorts( 'h' )			, gopt_longs( "help")),						// Help
+		  gopt_option( 'b', GOPT_ARG,  gopt_shorts( 'b' )	, gopt_longs( "backup")),					// Just backups partition
+		  gopt_option( 'f', GOPT_ARG,  gopt_shorts( 'f' )	, gopt_longs( "flash")),					// Flash image to --device
+		  gopt_option( 'a', GOPT_ARG,  gopt_shorts( 'a' )	, gopt_longs( "backupafter")),  			// Backups same partition after flash
+		  gopt_option( 'd', GOPT_ARG,  gopt_shorts( 'd' )	, gopt_longs( "device")),					// Device to use
+		  gopt_option( 'c', GOPT_ARG,  gopt_shorts( 'c' )	, gopt_longs( "chunksize")),				// Chunksize
+		  gopt_option( 'r', 0,  	   gopt_shorts( 'r' )	, gopt_longs( "reboot_after_chunk"))		// Reboot
 	));
 
 	if (options == NULL) {
@@ -78,7 +93,36 @@ int main(int argc, const char **argv, char **env) {
 		return EXIT_FAILURE;
 	}
 
-	printf("=== emmc_recover %s, written by Fuses ===== \n", VERSION);
+	if (gopt(options, 'c')) {
+		const char *c;
+		gopt_arg(options, 'c', &c);
+		chunk_size = atoi(c);
+		if (chunk_size <= 0 || chunk_size > MAX_CHUNK) {
+			printf("Not valid chunk_size\n");
+			return EXIT_FAILURE;
+		}
+
+		if (gopt(options, 'r')) {
+			reboot_chunk = 1;
+		}
+
+		printf("Using chunksize %d", chunk_size);
+		if (reboot_chunk) printf(" rebooting device after chunk write\n");
+		else printf("\n");
+		fflush(stdout);
+
+	}
+
+	printf("================= emmc_recover " VERSION " ==========================\n");
+	printf("         (c) Copyright 2012 Unlimited.IO                     \n");
+	printf("=============================================================\n");
+	printf("\n");
+
+	if (getuid() != 0 && geteuid() != 0) {
+		printf("Run as root\n");
+		gopt_free(options);
+		return EXIT_FAILURE;
+	}
 
 	// If "Backup after flash flag" is set, check that file does not exists
 	if (gopt(options, 'a')) {
@@ -111,7 +155,7 @@ int main(int argc, const char **argv, char **env) {
 
 	}
 
-	if (gopt(options, 'f')) {
+	if (gopt(options, 'f') && !gopt(options, 'c')) {
 		const char* imagefile;
 		gopt_arg(options, 'f', &imagefile);
 		if (!check_file(imagefile)) {
@@ -146,7 +190,96 @@ int main(int argc, const char **argv, char **env) {
 		}
 	}
 
+	if (gopt(options, 'f') && gopt(options, 'c')) {
+
+		// Image needs to be flashed in minimal chunks.
+		// Qualcomm High-Speed USB Download Mode is partially blocked, Device has read/write access only few milliseconds
+		struct stat st;
+		uint8_t chunk[chunk_size];
+		unsigned long filesize;
+		const char* imagefile;
+		long int written = 0;
+
+		gopt_arg(options, 'f', &imagefile);
+		if (!check_file(imagefile)) {
+			printf("Cannot read image file %s\n", imagefile);
+			gopt_free(options);
+			return EXIT_FAILURE;
+		}
+
+		gopt_free(options);
+
+		stat(imagefile, &st);
+		filesize = st.st_size;
+
+		memset(chunk, 0x00, chunk_size);
+
+		float c = ( (float) filesize / (float) chunk_size) + 0.5F;
+
+		printf("%f\n", c);
+
+		printf("Ok, ready to flash\n");
+		printf("Filesize: \t%lu\n", filesize);
+		printf("Chunksize is:\t%d\n", chunk_size);
+		printf("Cycle count is: %f\n", c);
+
+		printf("Press ENTER if everything is correct, CTRL+C if not\n");
+		getc(stdin);
+
+		FILE *image = fopen(imagefile, "rb");
+		if (image == NULL) {
+			printf("Cannot open file %s\n", imagefile);
+			return EXIT_SUCCESS;
+		}
+
+		int readed;
+		while( (readed = fread(chunk, 1, chunk_size, image)) != 0) {
+			if (ferror(image)) {
+				printf("Error while reading %s file\n", imagefile);
+				fclose(image);
+				return EXIT_FAILURE;
+			}
+
+			printf("Readed %d bytes\n", readed);
+			reset_device_pbl();
+			if (wait_device(device)) {
+				write_chunk(device, written, chunk, readed);
+				written += readed;
+				fflush(stdout);
+				sleep(30);
+			}
+
+		}
+
+
+		fclose(image);
+
+
+	}
+
 	return EXIT_SUCCESS;
+}
+
+void write_chunk(const char* file, long int offset, uint8_t *data, int nof_bytes) {
+	FILE *part = fopen(file, "r+b");
+	if ( part == NULL ) {
+		printf("FATAL: Failed to open %s\n", file);
+		exit(-1);
+		return;
+	}
+
+	if ( fseek(part, offset, SEEK_SET ) == 0 ) {
+		printf("Writing %d bytes to offset 0x%08lX\n", nof_bytes, offset);
+		fwrite(data, 1, nof_bytes, part);
+	}
+	else {
+		printf("FATAL: cannot fseek to offset\n");
+		fclose(part);
+		exit(-1);
+	}
+
+	fclose(part);
+	// No point to detect failures, you don't get any if io block is applied!!
 }
 
 int wait_device(const char* device) {
@@ -160,14 +293,25 @@ int wait_device(const char* device) {
 	printf("Waiting device %s.......\n", device);
 
 	while(1) {
-		usleep(1000);
+		usleep(1);
 		if (check_file(device)) {
-			printf("Foundit!\n");
+			printf("Found device!\n");
 			fflush(stdout);
 			return 1;
 		}
 	}
 
+}
+
+int wait_device_gone(const char* device) {
+	while (1) {
+		if (!check_file(device)) {
+			printf("Device changed mode\n");
+			fflush(stdout);
+			return 1;
+		}
+		sleep(1);
+	}
 }
 
 int backup_partition(const char* partition, const char* filename) {
