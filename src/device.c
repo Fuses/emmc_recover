@@ -8,18 +8,18 @@
 #include "device.h"
 
 int reset_device_pbl(void) {
-						// Poweroff
-	uint8_t msg[5] = {0x7E, 0x0E, 0x06, 0x19, 0x7E};
 
 	int fd;
 	int wrote;
+						// Poweroff
+	uint8_t msg[] = {0x7E, 0x0E, 0x06, 0x19, 0x7E};
 
 	fd = open("/dev/ttyUSB0", O_RDWR | O_SYNC, 0600);
 	if (fd == -1) {
 		printf("Cannot reset device\n");
 		return -1;
 	}
-	wrote = write(fd, msg, 5);
+	wrote = write(fd, msg, sizeof(msg));
 	close(fd);
 	printf("Wrote %d bytes\n", wrote);
 	return 0;
