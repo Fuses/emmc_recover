@@ -9,7 +9,7 @@ STRIP   = /usr/bin/strip
 CP	= cp
 
 TRG = emmc_recover
-OBJ = gopt.o  modhandler.o pbl_reset.o emmc_recover.o
+OBJ = gopt.o  modhandler.o device.o emmc_recover.o
 
 all: $(OBJ)
 	$(CC) $(CFLAGS) $(INCDIR) -o $(TRG) $(OBJ) $(LDFLAGS)

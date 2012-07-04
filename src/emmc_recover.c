@@ -26,10 +26,12 @@
 #include "modhandler.h"
 #include "emmc_recover.h"
 #include "gopt.h"
-#include "pbl_reset.h"
+#include "device.h"
 
 #define MAX_CHUNK 2097152
+#define WAIT_TIMEOUT 10
 
+int check_file(const char* file);
 void write_chunk(const char* file, long int offset, uint8_t *data, int nof_bytes);
 
 void usage() {
@@ -200,6 +202,31 @@ int main(int argc, const char **argv, char **env) {
 		const char* imagefile;
 		long int written = 0;
 
+		if (!qdload_device_connected()) {
+			printf("Please connected bricked device\n");
+			gopt_free(options);
+			return EXIT_FAILURE;
+		}
+
+		if (module_loaded("qcserial")) {
+			printf("Please blacklist qcserial module\n");
+			gopt_free(options);
+			return EXIT_FAILURE;
+		}
+
+		if (module_loaded("usbserial")) {
+			remove_usbserial();
+			sleep(1);
+			load_usbserial();
+			sleep(1);
+		}
+
+		if (!check_file("/dev/ttyUSB0")) {
+			printf("Cannot find bricked device node\n");
+			gopt_free(options);
+			return EXIT_FAILURE;
+		}
+
 		gopt_arg(options, 'f', &imagefile);
 		if (!check_file(imagefile)) {
 			printf("Cannot read image file %s\n", imagefile);
@@ -240,13 +267,32 @@ int main(int argc, const char **argv, char **env) {
 				return EXIT_FAILURE;
 			}
 
-			printf("Readed %d bytes\n", readed);
+			printf("Ready to write %d bytes\n", readed);
+			printf("Resetting device\n");
+			fflush(stdout);
 			reset_device_pbl();
+			printf("Reset command sent\n");
+			fflush(stdout);
 			if (wait_device(device)) {
+				int wi;
 				write_chunk(device, written, chunk, readed);
 				written += readed;
 				fflush(stdout);
-				sleep(30);
+
+				printf("Waiting mode-switch\n");
+				wait_device_gone();
+
+				// Wait till ttyUSB appers (dload mode)
+				for (wi=0;wi<WAIT_TIMEOUT;wi++) {
+					sleep(1);
+					if (check_file("/dev/ttyUSB0")) break;
+				}
+
+				if (wi >= WAIT_TIMEOUT) {
+					printf("Failed to detect device in dload-mode\n");
+					return EXIT_FAILURE;
+				}
+				printf("Detected mode-switch\n");
 			}
 
 		}
