@@ -10,8 +10,7 @@
 int reset_device_pbl(void) {
 
 	int fd;
-	int wrote;
-						// Poweroff
+				// Poweroff
 	uint8_t msg[] = {0x7E, 0x0E, 0x06, 0x19, 0x7E};
 
 	fd = open("/dev/ttyUSB0", O_RDWR | O_SYNC, 0600);
@@ -19,7 +18,7 @@ int reset_device_pbl(void) {
 		printf("Cannot reset device\n");
 		return -1;
 	}
-	wrote = write(fd, msg, sizeof(msg));
+	write(fd, msg, sizeof(msg));
 	close(fd);
 	//printf("Wrote %d bytes\n", wrote);
 	return 0;

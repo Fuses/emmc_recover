@@ -33,6 +33,8 @@
 
 int check_file(const char* file);
 void write_chunk(const char* file, long int offset, uint8_t *data, int nof_bytes);
+int wait_device_gone(const char* device);
+int wait_device(const char* device);
 
 void usage() {
 	printf("emmc_recovery %s usage:\n", VERSION);
@@ -280,7 +282,7 @@ int main(int argc, const char **argv, char **env) {
 				fflush(stdout);
 
 				printf("Waiting mode-switch\n");
-				wait_device_gone();
+				wait_device_gone(device);
 
 				// Wait till ttyUSB appers (dload mode)
 				for (wi=0;wi<WAIT_TIMEOUT;wi++) {
