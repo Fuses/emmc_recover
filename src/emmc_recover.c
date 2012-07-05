@@ -245,8 +245,6 @@ int main(int argc, const char **argv, char **env) {
 
 		float c = ( (float) filesize / (float) chunk_size) + 0.5F;
 
-		printf("%f\n", c);
-
 		printf("Ok, ready to flash\n");
 		printf("Filesize: \t%lu\n", filesize);
 		printf("Chunksize is:\t%d\n", chunk_size);
@@ -295,13 +293,14 @@ int main(int argc, const char **argv, char **env) {
 					return EXIT_FAILURE;
 				}
 				printf("Detected mode-switch\n");
+				sleep(2);
 			}
 
 		}
 
 
 		fclose(image);
-
+		reset_device_pbl();
 
 	}
 
