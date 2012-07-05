@@ -21,7 +21,7 @@ int reset_device_pbl(void) {
 	}
 	wrote = write(fd, msg, sizeof(msg));
 	close(fd);
-	printf("Wrote %d bytes\n", wrote);
+	//printf("Wrote %d bytes\n", wrote);
 	return 0;
 }
 
