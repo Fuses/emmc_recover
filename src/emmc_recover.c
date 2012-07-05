@@ -37,8 +37,8 @@ int wait_device_gone(const char* device);
 int wait_device(const char* device);
 
 void usage() {
-	printf("emmc_recovery %s usage:\n", VERSION);
-	printf("emmc_recovery [OPTIONS]\n");
+	printf("emmc_recover %s\n", VERSION);
+	printf("usage: emmc_recover [OPTIONS]\n");
 	printf("\t-h | --help: display this help\n");
 	printf("\t-b | --backup\n");
 	printf("\t-f | --flash\n");

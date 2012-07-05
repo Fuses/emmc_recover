@@ -1,7 +1,7 @@
 #ifndef EMMC_RECOVER_H_
 #define EMMC_RECOVER_H_
 
-#define VERSION "0.3"
+#define VERSION "0.3 alpha"
 
 int backup_partition(const char* partition, const char* filename);
 int wait_device(const char* device);
