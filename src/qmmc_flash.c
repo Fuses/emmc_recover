@@ -101,7 +101,7 @@ int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_s
 	FILE *image = fopen(imagefile, "rb");
 	if (image == NULL) {
 		printf("Cannot open file %s\n", imagefile);
-		return EXIT_SUCCESS;
+		return 0;
 	}
 
 	int readed;
@@ -109,7 +109,7 @@ int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_s
 		if (ferror(image)) {
 			printf("Error while reading %s file\n", imagefile);
 			fclose(image);
-			return EXIT_FAILURE;
+			return 0;
 		}
 
 		printf("Ready to write %d bytes\n", readed);
@@ -135,7 +135,7 @@ int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_s
 
 			if (wi >= WAIT_TIMEOUT) {
 				printf("Failed to detect device in dload-mode\n");
-				return EXIT_FAILURE;
+				return 0;
 			}
 			printf("Detected mode-switch\n");
 			sleep(2);

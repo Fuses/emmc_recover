@@ -17,12 +17,12 @@ int reset_device_pbl(void) {
 	fd = open("/dev/ttyUSB0", O_RDWR | O_SYNC, 0600);
 	if (fd == -1) {
 		printf("Cannot reset device\n");
-		return -1;
+		return 0;
 	}
 	write(fd, msg, sizeof(msg));
 	close(fd);
 	//printf("Wrote %d bytes\n", wrote);
-	return 0;
+	return 1;
 }
 
 #define OP_LEN 1024
