@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "device.h"
 
@@ -48,3 +49,43 @@ int qdload_device_connected(void) {
 	return 0;
 
 }
+
+int wait_device(const char* device) {
+
+	if (check_file(device)) {
+		printf("Device already exists!!\n");
+		printf("Please disconnect device!!\n");
+		return 0;
+	}
+
+	printf("Waiting device %s.......\n", device);
+
+	while(1) {
+		usleep(1);
+		if (check_file(device)) {
+			printf("Found device!\n");
+			fflush(stdout);
+			return 1;
+		}
+	}
+
+}
+
+int wait_device_gone(const char* device) {
+	while (1) {
+		if (!check_file(device)) {
+			printf("Device changed mode\n");
+			fflush(stdout);
+			return 1;
+		}
+		sleep(1);
+	}
+}
+
+int check_file(const char* file) {
+	struct stat s;
+	int ret = stat(file, &s);
+	if (ret != 0) return 0;
+	return 1;
+}
+
