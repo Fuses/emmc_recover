@@ -74,8 +74,6 @@ int main(int argc, const char **argv, char **env) {
 	}
 
 	printf("================= emmc_recover " VERSION " ==========================\n");
-	printf("         (c) Copyright 2012 Unlimited.IO                     \n");
-	printf("=============================================================\n");
 	printf("\n");
 
 	if (getuid() != 0 && geteuid() != 0) {
