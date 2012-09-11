@@ -1,7 +1,5 @@
 /*
-	Copyright (C) 2012 Unlimited.io
-
-	This program is free software: you can redistribute it and/or modify
+    This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
@@ -40,7 +38,6 @@ void usage() {
 	printf("\t-d | --device\n");
 	printf("\t-c | --chunksize\n");
 	printf("\t-r | --reboot_pbl\n");
-	printf("\nCopyright (C) 2012 Unlimited.io, source released under GPL\n");
 
 }
 
