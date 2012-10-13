@@ -144,44 +144,6 @@ int main(int argc, const char **argv, char **env) {
 
 	if (gopt(options, 'f') && gopt(options, 'c')) {
 		const char* imagefile;
-<<<<<<< HEAD
-		long int written = 0;
-
-		if (!qdload_device_connected()) {
-			printf("Please connected bricked device\n");
-			gopt_free(options);
-			return EXIT_FAILURE;
-		}
-
-/*
-
-		No need to blacklist qcserial. it's easier to check for the ttyUSB as qcseial
-                becasue this way usb modems will not show up.
-
-
-		if (module_loaded("qcserial")) {
-			printf("Please blacklist qcserial module\n");
-			gopt_free(options);
-			return EXIT_FAILURE;
-		}
-
-
-		if (module_loaded("usbserial")) {
-			remove_usbserial();
-			sleep(1);
-			load_usbserial();
-			sleep(1);
-		}
-*/
-
-		if (!qdload_device_connected() ){
-			printf("Cannot find bricked device node\n");
-			gopt_free(options);
-			return EXIT_FAILURE;
-		}
-
-=======
->>>>>>> dcdf4a33787d7cdc72a4fa74e43d6887a0411f1f
 		gopt_arg(options, 'f', &imagefile);
 		if (!check_file(imagefile)) {
 			printf("Cannot read image file %s\n", imagefile);
@@ -191,67 +153,8 @@ int main(int argc, const char **argv, char **env) {
 
 		flash_part_chunk(device, imagefile, chunk_size);
 
-<<<<<<< HEAD
-		printf("Ok, ready to flash\n");
-		printf("Filesize: \t%lu\n", filesize);
-		printf("Chunksize is:\t%d\n", chunk_size);
-		printf("Cycle count is: %f\n", c);
-
-		printf("Press ENTER if everything is correct, CTRL+C if not\n");
-		getc(stdin);
-
-		FILE *image = fopen(imagefile, "rb");
-		if (image == NULL) {
-			printf("Cannot open file %s\n", imagefile);
-			return EXIT_SUCCESS;
-		}
-
-		int readed;
-		while( (readed = fread(chunk, 1, chunk_size, image)) != 0) {
-			if (ferror(image)) {
-				printf("Error while reading %s file\n", imagefile);
-				fclose(image);
-				return EXIT_FAILURE;
-			}
-
-			printf("Ready to write %d bytes\n", readed);
-			printf("Resetting device\n");
-			fflush(stdout);
-			reset_device_pbl();
-			printf("Reset command sent\n");
-			fflush(stdout);
-			if (wait_device(device)) {
-				int wi;
-				write_chunk(device, written, chunk, readed);
-				written += readed;
-				fflush(stdout);
-
-				printf("Waiting mode-switch\n");
-				wait_device_gone(device);
-
-				// Wait till ttyUSB appers (dload mode)
-				for (wi=0;wi<WAIT_TIMEOUT;wi++) {
-					sleep(1);
-					if (qdload_device_connected()) break;
-				}
-
-				if (wi >= WAIT_TIMEOUT) {
-					printf("Failed to detect device in dload-mode\n");
-					return EXIT_FAILURE;
-				}
-				printf("Detected mode-switch\n");
-				sleep(2);
-			}
-
-		}
-
-
-		fclose(image);
-		reset_device_pbl();
-=======
 		gopt_free(options);
 		return EXIT_SUCCESS;
->>>>>>> dcdf4a33787d7cdc72a4fa74e43d6887a0411f1f
 
 	}
 

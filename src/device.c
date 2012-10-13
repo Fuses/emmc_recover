@@ -2,76 +2,18 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <termios.h>
 #include <stdint.h>
 #include <string.h>
-<<<<<<< HEAD
-#include <glob.h>
-#include <string.h>
-
-=======
 #include <sys/stat.h>
->>>>>>> dcdf4a33787d7cdc72a4fa74e43d6887a0411f1f
 
 #include "device.h"
 
+int reset_device_pbl(void) {
 
-char* glob_pattern(char *dir, char *wildcard)
-{
-  char *gfilename;
-  size_t cnt=0, length=0;
-  glob_t glob_results;
-  char **p;
-  chdir(dir);
+	int fd;
+				// Poweroff
+	uint8_t msg[] = {0x7E, 0x0E, 0x06, 0x19, 0x7E};
 
-<<<<<<< HEAD
-  glob(wildcard, GLOB_NOCHECK, 0, &glob_results);
-
-  /* How much space do we need?  */
-  for (p = glob_results.gl_pathv, cnt = glob_results.gl_pathc;
-       cnt; p++, cnt--)
-    length += strlen(*p) + 1;
-
-  /* Allocate the space and generate the list.  */
-  gfilename = (char *) calloc(length, sizeof(char));
-  for (p = glob_results.gl_pathv, cnt = glob_results.gl_pathc;
-       cnt; p++, cnt--)
-    {
-      strcat(gfilename, *p);
-      if (cnt > 1)
-        strcat(gfilename, " ");
-    }
-
-  globfree(&glob_results);
-  return gfilename;
-}
-
-int reset_device_pbl() {
-    int serialfd;
-    struct termios terminal_data;
-    //char qdlresp[1024];
-    char tty[32];
-
-    
-    printf("Waiting for device");
-    while( (serialfd = open(tty, O_RDWR) ) == -1) {
-	    printf(".");
-	    fflush(stdout);
-	    sleep(2);
-	    sprintf(tty, "/dev/%s", glob_pattern("/sys/bus/usb-serial/drivers/qcserial", "ttyUSB*"));
-    }
-
-
-    printf(" - found %s - OK\n", tty);
-    tcgetattr (serialfd, &terminal_data);
-    cfmakeraw (&terminal_data);
-    tcsetattr (serialfd, TCSANOW, &terminal_data);
-
-
-    char seq[] = {0x7e, 0x0e, 0x06, 0x19, 0x7e}; // 0x0E
-    write(serialfd, seq, 5);
-    return 0;
-=======
 	fd = open("/dev/ttyUSB0", O_RDWR | O_SYNC, 0600);
 	if (fd == -1) {
 		printf("Cannot reset device\n");
@@ -81,19 +23,31 @@ int reset_device_pbl() {
 	close(fd);
 	//printf("Wrote %d bytes\n", wrote);
 	return 1;
->>>>>>> dcdf4a33787d7cdc72a4fa74e43d6887a0411f1f
 }
-
 
 #define OP_LEN 1024
 // Easier to pipe output from lsusb :)
 int qdload_device_connected(void) {
+	FILE *fp;
+	char output[OP_LEN];
+	memset(output, 0x00, OP_LEN);
 
-	if ( strlen(glob_pattern("/sys/bus/usb-serial/drivers/qcserial", "ttyUSB*")) > 7 ) {
-		return 1;
-	} else {
+	fp = popen("lsusb", "r");
+	if (fp == NULL) {
+		printf("FATAL ERROR: Cannot read usb devices\n");
 		return 0;
 	}
+
+	while (fgets(output, OP_LEN, fp) != NULL ) {
+		if (strstr(output, "05c6:9008") != NULL) {
+			pclose(fp);
+			return 1;
+		}
+	}
+
+	pclose(fp);
+	return 0;
+
 }
 
 int wait_device(const char* device) {
