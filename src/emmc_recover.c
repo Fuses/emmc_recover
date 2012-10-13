@@ -210,11 +210,18 @@ int main(int argc, const char **argv, char **env) {
 			return EXIT_FAILURE;
 		}
 
+/*
+
+		No need to blacklist qcserial. it's easier to check for the ttyUSB as qcseial
+                becasue this way usb modems will not show up.
+
+
 		if (module_loaded("qcserial")) {
 			printf("Please blacklist qcserial module\n");
 			gopt_free(options);
 			return EXIT_FAILURE;
 		}
+
 
 		if (module_loaded("usbserial")) {
 			remove_usbserial();
@@ -222,8 +229,9 @@ int main(int argc, const char **argv, char **env) {
 			load_usbserial();
 			sleep(1);
 		}
+*/
 
-		if (!check_file("/dev/ttyUSB0")) {
+		if (!qdload_device_connected() ){
 			printf("Cannot find bricked device node\n");
 			gopt_free(options);
 			return EXIT_FAILURE;
@@ -285,7 +293,7 @@ int main(int argc, const char **argv, char **env) {
 				// Wait till ttyUSB appers (dload mode)
 				for (wi=0;wi<WAIT_TIMEOUT;wi++) {
 					sleep(1);
-					if (check_file("/dev/ttyUSB0")) break;
+					if (qdload_device_connected()) break;
 				}
 
 				if (wi >= WAIT_TIMEOUT) {
