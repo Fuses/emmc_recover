@@ -5,13 +5,9 @@
 #include <termios.h>
 #include <stdint.h>
 #include <string.h>
-<<<<<<< HEAD
 #include <glob.h>
 #include <string.h>
 
-=======
-#include <sys/stat.h>
->>>>>>> dcdf4a33787d7cdc72a4fa74e43d6887a0411f1f
 
 #include "device.h"
 
@@ -24,7 +20,6 @@ char* glob_pattern(char *dir, char *wildcard)
   char **p;
   chdir(dir);
 
-<<<<<<< HEAD
   glob(wildcard, GLOB_NOCHECK, 0, &glob_results);
 
   /* How much space do we need?  */
@@ -71,17 +66,6 @@ int reset_device_pbl() {
     char seq[] = {0x7e, 0x0e, 0x06, 0x19, 0x7e}; // 0x0E
     write(serialfd, seq, 5);
     return 0;
-=======
-	fd = open("/dev/ttyUSB0", O_RDWR | O_SYNC, 0600);
-	if (fd == -1) {
-		printf("Cannot reset device\n");
-		return 0;
-	}
-	write(fd, msg, sizeof(msg));
-	close(fd);
-	//printf("Wrote %d bytes\n", wrote);
-	return 1;
->>>>>>> dcdf4a33787d7cdc72a4fa74e43d6887a0411f1f
 }
 
 
@@ -95,43 +79,3 @@ int qdload_device_connected(void) {
 		return 0;
 	}
 }
-
-int wait_device(const char* device) {
-
-	if (check_file(device)) {
-		printf("Device already exists!!\n");
-		printf("Please disconnect device!!\n");
-		return 0;
-	}
-
-	printf("Waiting device %s.......\n", device);
-
-	while(1) {
-		usleep(1);
-		if (check_file(device)) {
-			printf("Found device!\n");
-			fflush(stdout);
-			return 1;
-		}
-	}
-
-}
-
-int wait_device_gone(const char* device) {
-	while (1) {
-		if (!check_file(device)) {
-			printf("Device changed mode\n");
-			fflush(stdout);
-			return 1;
-		}
-		sleep(1);
-	}
-}
-
-int check_file(const char* file) {
-	struct stat s;
-	int ret = stat(file, &s);
-	if (ret != 0) return 0;
-	return 1;
-}
-
