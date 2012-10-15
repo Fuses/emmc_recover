@@ -114,8 +114,7 @@ int main(int argc, const char **argv, char **env) {
 
 	gopt_arg(options, 'd', &device);
 
-	printf("Messing up with device %s, ARE YOU SURE?\nCTRL+C if not, ENTER to continue\n", device);
-	getc(stdin);
+	
 
 	if (gopt(options, 'b') && !gopt(options, 'c')) {
 		const char* backupfile;

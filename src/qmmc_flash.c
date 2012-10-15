@@ -36,8 +36,7 @@ int flash_part_dd(const char *device, const char* imagefile) {
 		return 0;
 	}
 
-	printf("Flash image file is %s\nDevice is %s\n\nPress ENTER if everything is correct, CTRL+C if not\n", imagefile, device);
-	getc(stdin);
+	
 	if (wait_device(device)) {
 		char command[256];
 		memset(command, 0x00, 256);
