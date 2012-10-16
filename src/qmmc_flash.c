@@ -61,7 +61,7 @@ int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_s
 	long int written = 0;
 
 	if (!qdload_device_connected()) {
-		printf("Please connected device\n");
+		printf("Please connect device\n");
 		return 0;
 	}
 
@@ -94,9 +94,7 @@ int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_s
 	printf("Chunksize is:\t%d\n", chunk_size);
 	printf("Cycle count is: %f\n", c);
 
-	printf("Press ENTER if everything is correct, CTRL+C if not\n");
-	getc(stdin);
-
+	
 	FILE *image = fopen(imagefile, "rb");
 	if (image == NULL) {
 		printf("Cannot open file %s\n", imagefile);
