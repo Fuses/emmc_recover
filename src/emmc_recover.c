@@ -37,6 +37,7 @@ void usage() {
 	printf("\t-f | --flash\n");
 	printf("\t-d | --device\n");
 	printf("\t-c | --chunksize\n");
+	printf("\t-q | --quiet\n");
 	printf("\t-r | --reboot_pbl\n");
 
 }
@@ -47,6 +48,7 @@ int main(int argc, const char **argv, char **env) {
 	void* options = NULL;
 
 	int chunk_size = 0;
+	int quiet_mode = 0;
 
 	if (argc <= 1) {
 		usage();
@@ -56,6 +58,7 @@ int main(int argc, const char **argv, char **env) {
 	options = gopt_sort( & argc, argv, gopt_start(
 		  gopt_option( 'h', 0, gopt_shorts( 'h' )			, gopt_longs( "help")),						// Help
 		  gopt_option( 'b', GOPT_ARG,  gopt_shorts( 'b' )	, gopt_longs( "backup")),					// Just backups partition
+		  gopt_option( 'q', 0,		   gopt_shorts( 'q' )	, gopt_longs( "quiet")),					// Quiet mode (no user prompts)
 		  gopt_option( 'f', GOPT_ARG,  gopt_shorts( 'f' )	, gopt_longs( "flash")),					// Flash image to --device
 		  gopt_option( 'd', GOPT_ARG,  gopt_shorts( 'd' )	, gopt_longs( "device")),					// Device to use
 		  gopt_option( 'c', GOPT_ARG,  gopt_shorts( 'c' )	, gopt_longs( "chunksize")),				// Chunksize
@@ -112,9 +115,17 @@ int main(int argc, const char **argv, char **env) {
 
 	}
 
+	if (gopt(options, 'q')) {
+		quiet_mode = 1;
+		
+	}
+	
 	gopt_arg(options, 'd', &device);
 
-	
+	if (quiet_mode == 0) {
+	printf("Messing up with device %s, ARE YOU SURE?\nCTRL+C if not, ENTER to continue\n", device);
+	getc(stdin);
+	}
 
 	if (gopt(options, 'b') && !gopt(options, 'c')) {
 		const char* backupfile;
@@ -135,7 +146,7 @@ int main(int argc, const char **argv, char **env) {
 	if (gopt(options, 'f') && !gopt(options, 'c')) {
 		const char* imagefile;
 		gopt_arg(options, 'f', &imagefile);
-		flash_part_dd(device, imagefile);
+		flash_part_dd(device, imagefile, quiet_mode);
 		gopt_free(options);
 		return EXIT_SUCCESS;
 
@@ -150,7 +161,7 @@ int main(int argc, const char **argv, char **env) {
 			return EXIT_FAILURE;
 		}
 
-		flash_part_chunk(device, imagefile, chunk_size);
+		flash_part_chunk(device, imagefile, chunk_size, quiet_mode);
 
 		gopt_free(options);
 		return EXIT_SUCCESS;
