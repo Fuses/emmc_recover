@@ -29,15 +29,18 @@ int backup_partition(const char *device, const char* backupfile) {
 
 }
 
-int flash_part_dd(const char *device, const char* imagefile) {
+int flash_part_dd(const char *device, const char* imagefile, int quiet_mode) {
 
 	if (!check_file(imagefile)) {
 		printf("Cannot read image file %s\n", imagefile);
 		return 0;
 	}
 
-	printf("Flash image file is %s\nDevice is %s\n\nPress ENTER if everything is correct, CTRL+C if not\n", imagefile, device);
-	getc(stdin);
+	if (quiet_mode == 0) {
+		printf("Flash image file is %s\nDevice is %s\n\nPress ENTER if everything is correct, CTRL+C if not\n", imagefile, device);
+		getc(stdin);
+	}
+	
 	if (wait_device(device)) {
 		char command[256];
 		memset(command, 0x00, 256);
@@ -53,7 +56,7 @@ int flash_part_dd(const char *device, const char* imagefile) {
 	return 0;
 }
 
-int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_size) {
+int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_size, int quiet_mode) {
 	// Qualcomm High-Speed USB Download Mode is partially blocked, Device has read/write access only few milliseconds
 	struct stat st;
 	uint8_t chunk[chunk_size];
@@ -62,7 +65,7 @@ int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_s
 	long int written = 0;
 
 	if (!qdload_device_connected()) {
-		printf("Please connected device\n");
+		printf("Please connect device\n");
 		return 0;
 	}
 
@@ -95,9 +98,11 @@ int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_s
 	printf("Chunksize is:\t%d\n", chunk_size);
 	printf("Cycle count is: %f\n", c);
 
-	printf("Press ENTER if everything is correct, CTRL+C if not\n");
-	getc(stdin);
-
+	if (quiet_mode == 0) {
+		printf("Press ENTER if everything is correct, CTRL+C if not\n");
+		getc(stdin);
+	}
+	
 	FILE *image = fopen(imagefile, "rb");
 	if (image == NULL) {
 		printf("Cannot open file %s\n", imagefile);
