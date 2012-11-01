@@ -40,7 +40,7 @@ int flash_part_dd(const char *device, const char* imagefile, int quiet_mode) {
 		printf("Flash image file is %s\nDevice is %s\n\nPress ENTER if everything is correct, CTRL+C if not\n", imagefile, device);
 		getc(stdin);
 	}
-	
+
 	if (wait_device(device)) {
 		char command[256];
 		memset(command, 0x00, 256);
@@ -102,7 +102,7 @@ int flash_part_chunk(const char *device, const char* imagefile, uint32_t chunk_s
 		printf("Press ENTER if everything is correct, CTRL+C if not\n");
 		getc(stdin);
 	}
-	
+
 	FILE *image = fopen(imagefile, "rb");
 	if (image == NULL) {
 		printf("Cannot open file %s\n", imagefile);
@@ -217,4 +217,35 @@ int copy_partition(const char* partition, const char* filename) {
 	printf("Backup ok\n");
 
 	return 1;
+}
+
+int read_bytes(const char* partition, uint8_t *data, long int offset, long int len) {
+	FILE *part;
+	int r;
+
+	memset(data, 0x00, len);
+
+	part = fopen(partition, "rb");
+	if (part == NULL) {
+		fprintf(stderr, "Cannot open file %s\n",partition);
+		return 0;
+	}
+
+	if (fseek(part, offset, SEEK_SET) != 0) {
+		printf("Fail\n");
+		fclose(part);
+		return 0;
+	}
+
+	r = fread(data, 1, len, part);
+	if (r != len) {
+		printf("Read error\n");
+		memset(data, 0x00, len);
+		fclose(part);
+		return 0;
+	}
+
+	fclose(part);
+	return 1;
+
 }

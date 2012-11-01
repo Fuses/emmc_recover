@@ -13,7 +13,7 @@ OBJ = gopt.o  modhandler.o device.o qmmc_flash.o emmc_recover.o
 
 all: $(OBJ)
 	$(CC) $(CFLAGS) $(INCDIR) -o $(TRG) $(OBJ) $(LDFLAGS)
-	$(STRIP) --strip-all emmc_recover
+	#$(STRIP) --strip-all emmc_recover
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<

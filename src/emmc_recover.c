@@ -39,6 +39,7 @@ void usage() {
 	printf("\t-c | --chunksize\n");
 	printf("\t-q | --quiet\n");
 	printf("\t-r | --reboot_pbl\n");
+	printf("\t-H | --hexdump\n");
 
 }
 
@@ -62,7 +63,8 @@ int main(int argc, const char **argv, char **env) {
 		  gopt_option( 'f', GOPT_ARG,  gopt_shorts( 'f' )	, gopt_longs( "flash")),					// Flash image to --device
 		  gopt_option( 'd', GOPT_ARG,  gopt_shorts( 'd' )	, gopt_longs( "device")),					// Device to use
 		  gopt_option( 'c', GOPT_ARG,  gopt_shorts( 'c' )	, gopt_longs( "chunksize")),				// Chunksize
-		  gopt_option( 'r', 0,  	   gopt_shorts( 'r' )	, gopt_longs( "reboot_pbl"))				// Reboot
+		  gopt_option( 'r', 0,  	   gopt_shorts( 'r' )	, gopt_longs( "reboot_pbl")),				// Reboot
+		  gopt_option( 'H', GOPT_ARG,  gopt_shorts( 'H' )	, gopt_longs( "hexdump"))				// Chunksize
 	));
 
 	if (options == NULL) {
@@ -85,11 +87,8 @@ int main(int argc, const char **argv, char **env) {
 		return EXIT_FAILURE;
 	}
 
-	if (gopt(options, 'r')) {
-		if (!module_loaded("qcserial") && !module_loaded("usbserial")) {
-			load_usbserial();
-			sleep(1);
-		}
+	if (gopt(options, 'r') && !gopt(options, 'H')) {
+		verify_module();
 		reset_device_pbl();
 		gopt_free(options);
 		return EXIT_SUCCESS;
@@ -117,14 +116,76 @@ int main(int argc, const char **argv, char **env) {
 
 	if (gopt(options, 'q')) {
 		quiet_mode = 1;
-		
+
 	}
-	
+
 	gopt_arg(options, 'd', &device);
 
 	if (quiet_mode == 0) {
-	printf("Messing up with device %s, ARE YOU SURE?\nCTRL+C if not, ENTER to continue\n", device);
-	getc(stdin);
+		printf("Messing up with device %s, ARE YOU SURE?\nCTRL+C if not, ENTER to continue\n", device);
+		getc(stdin);
+	}
+
+	if (gopt(options, 'H')) {
+		const char* offsets;
+		gopt_arg(options, 'H', &offsets);
+
+		if (strlen(offsets) != 17 || strchr(offsets,':') == NULL) {
+			printf("emmc_recover --hexdump 00000000:00000000\n");
+			gopt_free(options);
+			return EXIT_SUCCESS;
+
+		}
+		else {
+			char offset1_c[9], offset2_c[9];
+			long int offset1, offset2;
+			long int byte_count;
+			uint8_t *data;
+
+			memset(offset1_c, 0x00, 9);
+			memset(offset2_c, 0x00, 9);
+
+			strncpy(offset1_c, offsets, 8);
+			strncpy(offset2_c, offsets+9, 8);
+
+			sscanf(offset1_c, "%08lX", &offset1);
+			sscanf(offset2_c, "%08lX", &offset2);
+
+			byte_count = offset2 - offset1 + 1;
+			if (byte_count <= 0 || byte_count > 0x10000000) {
+				printf("Failed\n");
+				return EXIT_FAILURE;
+			}
+
+			data = malloc(byte_count);
+			if (data == NULL) {
+				printf("Out of mem\n");
+				return EXIT_FAILURE;
+			}
+
+			if (gopt(options, 'r')) {
+				printf("Resetting device\n");
+				verify_module();
+				if (!reset_device_pbl()) {
+					gopt_free(options);
+					return EXIT_FAILURE;
+				}
+				sleep(1);
+			}
+
+			if (wait_device(device)) {
+				if (!read_bytes(device, data, offset1, byte_count)) {
+					gopt_free(options);
+					return EXIT_FAILURE;
+				}
+				print_hexdump(offset1, data, byte_count);
+			}
+			free(data);
+
+		}
+
+		gopt_free(options);
+		return EXIT_SUCCESS;
 	}
 
 	if (gopt(options, 'b') && !gopt(options, 'c')) {
@@ -168,6 +229,43 @@ int main(int argc, const char **argv, char **env) {
 
 	}
 
+	gopt_free(options);
+
 	return EXIT_SUCCESS;
+}
+
+void print_row(long int offset, uint8_t *row_bytes, int len) {
+	int i;
+	char c;
+
+	printf("%08lX ", offset);
+
+	for (i=0;i<len;i++) printf("%02X ", row_bytes[i]);
+	if (len < 0xF) for (i=0;i<0xF-len+1;i++) printf("   ");
+
+	printf("|");
+	for (i=0;i<len;i++) {
+		c = row_bytes[i];
+		if (c >= 0x20 && c <= 0x7E) printf("%c", c);
+		else printf(".");
+	}
+	printf("|\n");
+	fflush(stdout);
+}
+
+void print_hexdump(long int offset, uint8_t *data, int len) {
+	int i,j,rows,d;
+
+	rows = (int) len/0x10;
+
+	for (i=0;i<rows;i++){
+		print_row(offset, data, 0x10);
+		data += 0x10;
+		offset += 0x10;
+	}
+
+	d = len - (rows * 0x10);
+	if (d > 0) print_row(offset, data, d);
+
 }
 

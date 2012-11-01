@@ -4,5 +4,6 @@
 int module_loaded(char *module);
 int load_usbserial();
 int remove_usbserial();
+void verify_module();
 
 #endif

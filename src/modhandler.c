@@ -44,3 +44,14 @@ int remove_usbserial() {
 	unsigned int flags = O_NONBLOCK|O_EXCL;
 	return delete_module("usbserial", flags);
 }
+
+void verify_module() {
+	if (!module_loaded("qcserial") && !module_loaded("usbserial")) {
+		load_usbserial();
+		sleep(1);
+	}
+	else {
+		remove_usbserial();
+		load_usbserial();
+	}
+}
