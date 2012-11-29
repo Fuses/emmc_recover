@@ -1,8 +1,10 @@
 emmc_recover 0.3 alpha 4
 ============
 
-usage: emmc_recover [OPTIONS]
-	-h | --help: display this help
+usage: 
+emmc_recover [OPTIONS]
+
+	-h | --help: display this help	
 	-b | --backup
 	-f | --flash
 	-d | --device
